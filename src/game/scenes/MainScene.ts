@@ -6,12 +6,19 @@ import { dispatchMapStats } from '../events/EventBus';
 import { MapQueryService } from '../core/MapQueryService';
 import { UnitManager } from '../core/UnitManager';
 import { UnitType } from '../entities/UnitTypes';
+import { MapObjectManager } from '../objects/MapObjectManager';
+import { MapObjectRenderer } from '../renderers/MapObjectRenderer';
+import { DiscoveryService } from '../objects/DiscoveryService';
 
 export class MainScene extends Phaser.Scene {
   private mapEngine!: MapEngine;
   private chunkManager!: ChunkManager;
   private mapQuery!: MapQueryService;
   private unitManager!: UnitManager;
+  
+  private objectManager!: MapObjectManager;
+  private objectRenderer!: MapObjectRenderer;
+  private discoveryService!: DiscoveryService;
 
   private isPointerDown = false;
   private dragStartX = 0;
@@ -30,6 +37,10 @@ export class MainScene extends Phaser.Scene {
     this.unitManager = new UnitManager(this, this.mapQuery);
     this.chunkManager = new ChunkManager(this, this.mapEngine);
     
+    this.objectManager = new MapObjectManager(this.mapQuery);
+    this.objectRenderer = new MapObjectRenderer(this, this.objectManager);
+    this.discoveryService = new DiscoveryService(this.objectManager, this.unitManager);
+
     // Set initial camera position in the center of the world
     const initialTx = 2048;
     const initialTy = 2048;
@@ -43,6 +54,9 @@ export class MainScene extends Phaser.Scene {
     // Since spawn logic finds nearest water/land depending on type:
     this.unitManager.spawnUnit('ship-1', UnitType.SHIP, initialTx, initialTy);
 
+    // Initial render of objects
+    this.objectRenderer.update();
+
     // input setup
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       this.isPointerDown = true;
@@ -51,7 +65,7 @@ export class MainScene extends Phaser.Scene {
       this.hasDragged = false;
     });
 
-    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer, currentlyOver: Phaser.GameObjects.GameObject[]) => {
       this.isPointerDown = false;
       
       const dx = pointer.x - this.dragStartX;
@@ -59,6 +73,11 @@ export class MainScene extends Phaser.Scene {
       const dist = Math.sqrt(dx * dx + dy * dy);
 
       if (dist <= 5) { // Threshold for click vs drag
+        if (currentlyOver && currentlyOver.length > 0) {
+          // It was caught by a MapObject hit area
+          return;
+        }
+
         const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
         const { tx, ty } = screenToTile(worldPoint.x, worldPoint.y);
         
@@ -123,6 +142,9 @@ export class MainScene extends Phaser.Scene {
     const cam = this.cameras.main;
     this.chunkManager.update(cam.scrollX + cam.width / 2, cam.scrollY + cam.height / 2, cam.width / cam.zoom, cam.height / cam.zoom);
     this.unitManager.update(delta);
+    
+    this.discoveryService.update(delta);
+    this.objectRenderer.update(); // could be optimized, but fine for prototype
 
     // Get current hover tile
     const pointer = this.input.activePointer;
