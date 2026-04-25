@@ -16,7 +16,6 @@ export function HUD() {
 
   const [selectedUnit, setSelectedUnit] = useState<{id: string, type: string} | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
-  const [selectedPoi, setSelectedPoi] = useState<MapObject | null>(null);
   const [recentDiscoveries, setRecentDiscoveries] = useState<string[]>([]);
   const [totalDiscovered, setTotalDiscovered] = useState<number>(0);
 
@@ -37,7 +36,6 @@ export function HUD() {
     const handleUnitSelected = (e: Event) => {
       const customEvent = e as CustomEvent<{id: string, type: string}>;
       setSelectedUnit(customEvent.detail);
-      setSelectedPoi(null); // Deselect POI if a unit is selected
     };
 
     const handleUnitDeselected = () => {
@@ -48,12 +46,6 @@ export function HUD() {
       const customEvent = e as CustomEvent<string>;
       setNotification(customEvent.detail);
       setTimeout(() => setNotification(null), 3000);
-    };
-
-    const handlePoiClicked = (e: Event) => {
-      const customEvent = e as CustomEvent<MapObject>;
-      setSelectedPoi(customEvent.detail);
-      setSelectedUnit(null); // Deselect unit if POI is selected
     };
 
     const handleDiscoveredPoi = (e: Event) => {
@@ -67,7 +59,6 @@ export function HUD() {
     EventBus.on('unit-selected', handleUnitSelected);
     EventBus.on('unit-deselected', handleUnitDeselected);
     EventBus.on('show-notification', handleNotification);
-    EventBus.on('poi-clicked', handlePoiClicked);
     EventBus.on('discovered-poi', handleDiscoveredPoi);
 
     return () => {
@@ -75,21 +66,9 @@ export function HUD() {
       EventBus.off('unit-selected', handleUnitSelected);
       EventBus.off('unit-deselected', handleUnitDeselected);
       EventBus.off('show-notification', handleNotification);
-      EventBus.off('poi-clicked', handlePoiClicked);
       EventBus.off('discovered-poi', handleDiscoveredPoi);
     };
   }, []);
-
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case 'CITY': return '城市';
-      case 'PORT': return '港口';
-      case 'VILLAGE': return '村落';
-      case 'RUIN': return '遗迹';
-      case 'DISCOVERY': return '奇观';
-      default: return '地点';
-    }
-  };
 
   return (
     <>
@@ -104,32 +83,6 @@ export function HUD() {
           <h3 className="font-bold text-lg mb-2 text-yellow-300 border-b border-gray-600 pb-1">选中单位</h3>
           <div>类型: {selectedUnit.type === 'SHIP' ? '船只 ⛵' : '人物 🧍'}</div>
           <div>编号: {selectedUnit.id}</div>
-        </div>
-      )}
-
-      {selectedPoi && (
-        <div className="absolute top-4 left-4 w-64 p-4 m-4 bg-gray-900/90 text-white font-sans text-sm rounded shadow-lg border border-yellow-500">
-          <div className="flex justify-between items-start border-b border-gray-600 pb-2 mb-2">
-            <h3 className="font-bold text-xl text-yellow-400">{selectedPoi.isDiscovered ? selectedPoi.name : '未知地点'}</h3>
-            <button 
-              onClick={() => setSelectedPoi(null)}
-              className="text-gray-400 hover:text-white"
-            >
-              ✕
-            </button>
-          </div>
-          
-          {selectedPoi.isDiscovered ? (
-            <div className="space-y-2">
-              <div><span className="text-gray-400">类型:</span> {getTypeLabel(selectedPoi.type)}</div>
-              <div><span className="text-gray-400">坐标:</span> [{selectedPoi.tx}, {selectedPoi.ty}]</div>
-              <p className="text-gray-300 mt-2 italic leading-tight">{selectedPoi.description}</p>
-            </div>
-          ) : (
-            <div className="text-gray-400 italic py-4 text-center">
-              由于距离过远，无法看清全貌。<br/>请派遣船队或人员靠近探索。
-            </div>
-          )}
         </div>
       )}
 

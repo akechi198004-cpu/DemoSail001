@@ -40,6 +40,11 @@ export class MapObjectRenderer {
       nodeContainer.on('pointerup', () => {
         import('../events/EventBus').then(({ EventBus }) => {
           EventBus.emit('poi-clicked', obj);
+          if (obj.isDiscovered) {
+             EventBus.emit('open-location-dialog', obj);
+          } else {
+             EventBus.emit('show-notification', '距离太远，无法看清全貌。请派遣舰队靠近探索。');
+          }
         });
       });
 

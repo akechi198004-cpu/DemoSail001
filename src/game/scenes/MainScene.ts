@@ -25,6 +25,8 @@ export class MainScene extends Phaser.Scene {
   private dragStartY = 0;
   private hasDragged = false;
 
+  private isUiModalOpen = false;
+
   constructor() {
     super({ key: 'MainScene' });
   }
@@ -40,6 +42,11 @@ export class MainScene extends Phaser.Scene {
     this.objectManager = new MapObjectManager(this.mapQuery);
     this.objectRenderer = new MapObjectRenderer(this, this.objectManager);
     this.discoveryService = new DiscoveryService(this.objectManager, this.unitManager);
+
+    import('../events/EventBus').then(({ EventBus }) => {
+      EventBus.on('open-location-dialog', () => { this.isUiModalOpen = true; });
+      EventBus.on('close-location-dialog', () => { setTimeout(() => { this.isUiModalOpen = false; }, 100); }); // delay to prevent immediate click through
+    });
 
     // Set initial camera position in the center of the world
     const initialTx = 2048;
@@ -59,6 +66,7 @@ export class MainScene extends Phaser.Scene {
 
     // input setup
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (this.isUiModalOpen) return;
       this.isPointerDown = true;
       this.dragStartX = pointer.x;
       this.dragStartY = pointer.y;
@@ -68,6 +76,8 @@ export class MainScene extends Phaser.Scene {
     this.input.on('pointerup', (pointer: Phaser.Input.Pointer, currentlyOver: Phaser.GameObjects.GameObject[]) => {
       this.isPointerDown = false;
       
+      if (this.isUiModalOpen) return;
+
       const dx = pointer.x - this.dragStartX;
       const dy = pointer.y - this.dragStartY;
       const dist = Math.sqrt(dx * dx + dy * dy);
@@ -91,6 +101,7 @@ export class MainScene extends Phaser.Scene {
     });
 
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (this.isUiModalOpen) return;
       if (this.isPointerDown) {
         const dx = pointer.x - this.dragStartX;
         const dy = pointer.y - this.dragStartY;
@@ -111,6 +122,7 @@ export class MainScene extends Phaser.Scene {
 
     // Zoom
     this.input.on('wheel', (pointer: Phaser.Input.Pointer, gameObjects: any, deltaX: number, deltaY: number, deltaZ: number) => {
+      if (this.isUiModalOpen) return;
       let newZoom = this.cameras.main.zoom - deltaY * 0.001;
       newZoom = Phaser.Math.Clamp(newZoom, 0.2, 2.0);
       this.cameras.main.setZoom(newZoom);

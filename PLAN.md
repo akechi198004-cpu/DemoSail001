@@ -10,24 +10,46 @@
 
 ## 2. 文件结构 (File Structure)
 ```
-/src
-  /assets             # 存放临时占位图或真实瓦片素材
-  /components         # React 构件 (HUD 等)
-  /game
-    /core
-      MapEngine.ts      # 地图引擎控制核心
-      ChunkManager.ts   # Chunk 内存管理与调度
-      TerrainGen.ts     # 噪声与地貌生成
-      TileResolver.ts   # 瓦片边缘混合运算
-    /math
-      Coordinates.ts    # 坐标系换算逻辑
-    /scenes
-      MainScene.ts      # Phaser 主场景
-    Game.ts           # Phaser 实例入口
-  /styles
-  App.tsx           # React UI 根，包裹 Phaser 挂载点
-  main.tsx          # 启动入口
-PLAN.md
+src/
+  App.tsx               # 根组件
+  main.tsx              # 入口点
+  index.css             # 全局样式
+  components/           # React UI 
+    FleetOverview.tsx   # 舰队状态HUD
+    GameMessageLog.tsx  # 游戏消息日志HUD
+    HUD.tsx             # 主HUD
+    LocationActionMenu.tsx # 地点操作菜单
+    LocationDialog.tsx  # 地点交互详情弹窗
+  game/                 # Phaser 引擎目录
+    Game.ts             # React与Phaser桥接点
+    core/
+      ChunkManager.ts   # 地图切片异步加载
+      MapEngine.ts      # 地图核心引擎
+      MapQueryService.ts# 统一数据查询提供者
+      Passability.ts    # 通行区域检测
+      TerrainGen.ts     # 程序化地形生成规则(水/路/草等)
+      TileResolver.ts   # 地形转换与视觉映射
+      UnitManager.ts    # 管理场景中所有活跃实体
+    data/
+      MapResources.ts   # 真实城市与港口数据
+    entities/
+      Unit.ts           # 船只/人物等实体基类与渲染封装
+      UnitTypes.ts      # 实体类型定义
+    events/
+      EventBus.ts       # 游戏事件总线
+    math/
+      Coordinates.ts    # 坐标转换工具
+      Pathfinding.ts    # A*寻路算法
+    objects/
+      DiscoveryService.ts # 视距与对象发现服务
+      MapObjectManager.ts # 地图对象(城市/遗迹)管理
+      MapObjectTypes.ts # 对象类型定义
+    renderers/
+      MapObjectRenderer.ts# 地图对象渲染
+    scenes/
+      MainScene.ts      # 核心游玩场景
+    state/
+      GameStateStore.ts # React状态管理Store
 ```
 
 ## 3. 坐标系统 (Coordinate System)
@@ -78,8 +100,8 @@ PLAN.md
 ## 9. 阶段开发计划 (Phased Development Plan)
 - ** Phase 1：地图引擎 MVP（已完成 ✓）** - 完成无限加载架构与基础地形展示。
 - ** Phase 2：单位移动系统（已完成 ✓）** - 加入角色，基于 Tile 的碰撞与导航。
-- ** Phase 3：地图对象与事件系统（未开始）** - 建筑、静态物体的渲染与视距发现（视野机制）。
-- ** Phase 4：UI与地点交互（未开始）** - 业务逻辑前置，丰富的页面交互 HUD。
+- ** Phase 3：地图对象与事件系统（已完成 ✓）** - 建筑、静态物体的渲染与视距发现（视野机制）。
+- ** Phase 4：UI与地点交互（已完成 ✓）** - 业务逻辑前置，地点详情弹窗、舰队状态追踪。
 - ** Phase 5：视觉升级与小地图（未开始）** - 美术升级，特效增强，小地图模块引入。
 
 ## Phase 2 详细设计 (单位移动系统 - 已完成 ✓)
@@ -181,12 +203,17 @@ PLAN.md
 ## 10. 每个阶段的验收标准 (Acceptance Criteria per Phase)
 - **Phase 1**: 可鼠标拖拽摄像机漫游; 周围 Chunk 随着视野动态装载/卸载; 控制台不出现 OOM; HUD 数据实时反馈 FPS 与 Tile 数目；按类型绘制不同颜色或占位图的地形。
 - **Phase 2 (已完成 ✓)**: 能够正确刷出船和人各自一艘/一人并分离管理; 区分真实点击和拖放; 提供寻路并限制步数防止内存枯竭; 动态改变单位Z轴和显示正确提示信息。
-- **Phase 3 (对象发现)**:
+- **Phase 3 (对象发现 - 已完成 ✓)**:
   - 地图上能够渲染出城市、港口、遗迹等预设点（固定在 2048 中央区块附近）。
   - 没有走近时不会暴露对象位置（可不显示或显示黑屋）。
   - 单位移动到对象范围内触发 `EventBus`，HUD 出现“发现了 XXX”。
   - 发现后，对象展示为不同颜色图标，名字上浮展示。
   - 点击对象能在 HUD 或者居中 UI 中看到其详情描述。
   - F5 刷新依然保留探索状态 (localStorage 读取成功)。
-- **Phase 4**: 走到城市点击能打开包含各项业务菜单的弹窗，完成前置 UI 状态流转体验。
+- **Phase 4 (地点交互UI - 已完成 ✓)**: 
+  - 单位移动到已发现地点，点击可以打开 React 地点详情弹窗。
+  - 不同地点的类型应显示不同的操作按钮（如港口有补给、修船等，城市有酒馆等）。
+  - 弹窗打开时，底层 Phaser 引擎不可穿透点击，不再响应移动事件。
+  - 点击菜单按钮能显示操作中文反馈（例如 GameMessageLog 记录操作或少量数值改变）。
+  - 拥有一个左侧或底部的 FleetOverview 展现资源状态（金币、粮食等）。
 - **Phase 5**: 画面完全替代为等距 2D 像素地形与精灵素材，具备生机（如海边波纹、动态阴影）。小地图可点。

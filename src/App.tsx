@@ -7,6 +7,9 @@ import React, { useEffect, useRef } from 'react';
 import * as Phaser from 'phaser';
 import { createGame } from './game/Game';
 import { HUD } from './components/HUD';
+import { LocationDialog } from './components/LocationDialog';
+import { GameMessageLog } from './components/GameMessageLog';
+import { FleetOverview } from './components/FleetOverview';
 
 export default function App() {
   const gameRef = useRef<Phaser.Game | null>(null);
@@ -36,6 +39,9 @@ export default function App() {
       
       {/* React HUD Overlay */}
       <HUD />
+      <LocationDialog />
+      <GameMessageLog />
+      <FleetOverview />
     </div>
   );
 }
